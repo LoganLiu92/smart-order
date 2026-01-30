@@ -108,6 +108,12 @@ cd frontend
 npm install
 npm run dev
 ```
+Frontend defaults to same-origin `/api` and `/ws`. If you need custom domains, set in `frontend/.env`:
+```
+VITE_API_BASE=https://your-api.example.com
+VITE_WS_URL=https://your-api.example.com/ws
+```
+Dev server also proxies `/api` and `/ws` to `http://localhost:8080`.
 Then open:
 - Landing: `http://localhost:8081/`
 - Store Login: `http://localhost:8081/login`

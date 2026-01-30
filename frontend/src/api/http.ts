@@ -1,7 +1,7 @@
-﻿const API_BASE =
+const API_BASE =
   (window as typeof window & { API_BASE?: string }).API_BASE ||
   import.meta.env.VITE_API_BASE ||
-  "http://localhost:8080";
+  "";
 
 export type AuthMode = "store" | "platform";
 

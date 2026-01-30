@@ -1,10 +1,10 @@
-﻿import SockJS from "sockjs-client";
+import SockJS from "sockjs-client";
 import Stomp from "stompjs";
 
 const WS_URL =
   (window as typeof window & { WS_URL?: string }).WS_URL ||
   import.meta.env.VITE_WS_URL ||
-  "http://localhost:8080/ws";
+  "/ws";
 
 export type WsEvent = {
   type: string;
