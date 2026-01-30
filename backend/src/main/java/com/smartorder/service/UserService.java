@@ -1,22 +1,17 @@
 package com.smartorder.service;
 
 import com.smartorder.model.User;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 @Service
 public class UserService {
-  private final Map<String, User> users = new ConcurrentHashMap<>();
+  private final JdbcTemplate jdbcTemplate;
 
-  public UserService() {
-  }
-
-  private String key(String storeId, String username) {
-    return storeId + ":" + username;
+  public UserService(JdbcTemplate jdbcTemplate) {
+    this.jdbcTemplate = jdbcTemplate;
   }
 
   public User createUser(String storeId, String username, String password, String role) {
@@ -26,24 +21,40 @@ public class UserService {
     user.username = username;
     user.password = password;
     user.role = role;
-    users.put(key(storeId, username), user);
+    jdbcTemplate.update(
+        "INSERT INTO users (id, store_id, username, password, role) VALUES (?, ?, ?, ?, ?)",
+        user.id, user.storeId, user.username, user.password, user.role);
     return user;
   }
 
   public User validate(String storeId, String username, String password) {
-    User user = users.get(key(storeId, username));
-    if (user == null) return null;
-    if (!user.password.equals(password)) return null;
-    return user;
+    List<User> list = jdbcTemplate.query(
+        "SELECT * FROM users WHERE store_id=? AND username=? AND password=?",
+        new Object[] { storeId, username, password },
+        (rs, rowNum) -> {
+          User user = new User();
+          user.id = rs.getString("id");
+          user.storeId = rs.getString("store_id");
+          user.username = rs.getString("username");
+          user.password = rs.getString("password");
+          user.role = rs.getString("role");
+          return user;
+        });
+    return list.isEmpty() ? null : list.get(0);
   }
 
   public List<User> listByStore(String storeId) {
-    List<User> result = new ArrayList<>();
-    for (User user : users.values()) {
-      if (storeId.equals(user.storeId)) {
-        result.add(user);
-      }
-    }
-    return result;
+    return jdbcTemplate.query(
+        "SELECT * FROM users WHERE store_id=? ORDER BY username",
+        new Object[] { storeId },
+        (rs, rowNum) -> {
+          User user = new User();
+          user.id = rs.getString("id");
+          user.storeId = rs.getString("store_id");
+          user.username = rs.getString("username");
+          user.password = rs.getString("password");
+          user.role = rs.getString("role");
+          return user;
+        });
   }
 }

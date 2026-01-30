@@ -5,4 +5,6 @@ public class StoreInfo {
   public String name;
   public String logoUrl;
   public String coverUrl;
+  public String status;
+  public String defaultLanguage;
 }

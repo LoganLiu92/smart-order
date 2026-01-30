@@ -4,6 +4,8 @@ CREATE TABLE IF NOT EXISTS stores (
   name VARCHAR(128) NOT NULL,
   status VARCHAR(32) NOT NULL,
   default_language VARCHAR(16) NOT NULL,
+  logo_url VARCHAR(255),
+  cover_url VARCHAR(255),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -14,6 +16,15 @@ CREATE TABLE IF NOT EXISTS tables (
   status VARCHAR(16) NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uk_store_table (store_id, table_no)
+);
+
+CREATE TABLE IF NOT EXISTS table_codes (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  store_id VARCHAR(64) NOT NULL,
+  table_no VARCHAR(32) NOT NULL,
+  code VARCHAR(128) NOT NULL,
+  UNIQUE KEY uk_table_code (store_id, table_no),
+  UNIQUE KEY uk_code (code)
 );
 
 CREATE TABLE IF NOT EXISTS menu_categories (
@@ -56,6 +67,7 @@ CREATE TABLE IF NOT EXISTS orders (
   id VARCHAR(64) PRIMARY KEY,
   store_id VARCHAR(64) NOT NULL,
   table_no VARCHAR(32) NOT NULL,
+  client_id VARCHAR(64),
   status VARCHAR(16) NOT NULL,
   payment_status VARCHAR(16) NOT NULL,
   people_count INT,
@@ -95,7 +107,36 @@ CREATE TABLE IF NOT EXISTS users (
   store_id VARCHAR(64) NOT NULL,
   username VARCHAR(64) NOT NULL,
   password VARCHAR(128) NOT NULL,
-  role VARCHAR(16) NOT NULL
+  role VARCHAR(16) NOT NULL,
+  UNIQUE KEY uk_store_user (store_id, username)
+);
+
+CREATE TABLE IF NOT EXISTS carts (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  store_id VARCHAR(64) NOT NULL,
+  table_no VARCHAR(32) NOT NULL,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_cart_store_table (store_id, table_no)
+);
+
+CREATE TABLE IF NOT EXISTS cart_items (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  cart_id BIGINT NOT NULL,
+  dish_id VARCHAR(64) NOT NULL,
+  dish_name VARCHAR(128) NOT NULL,
+  qty INT NOT NULL,
+  unit_price DECIMAL(10,2) NOT NULL,
+  option_signature VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS cart_item_options (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  cart_item_id BIGINT NOT NULL,
+  group_id VARCHAR(64),
+  group_name VARCHAR(64),
+  option_id VARCHAR(64),
+  option_name VARCHAR(64),
+  extra_price DECIMAL(10,2) NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS wallets (
@@ -110,6 +151,12 @@ CREATE TABLE IF NOT EXISTS wallet_ledger (
   reason VARCHAR(255),
   amount DECIMAL(10,2) NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS store_ai_usage (
+  store_id VARCHAR(64) PRIMARY KEY,
+  ai_calls BIGINT NOT NULL,
+  ai_tokens BIGINT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS subscriptions (

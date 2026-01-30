@@ -38,7 +38,7 @@ public class TableController {
 
   @GetMapping
   public Object list(@RequestParam String storeId) {
-    return tableService.listAll().values().stream()
+    return tableService.listByStore(storeId).stream()
         .map(t -> {
           TableCode code = tableCodeService.getByTable(storeId, t.tableNo);
           return Map.of(
@@ -53,7 +53,7 @@ public class TableController {
   @PostMapping
   public TableInfo create(@RequestBody BindTableCodeRequest request, HttpServletRequest http) {
     enforceStore(request.storeId, http);
-    TableInfo info = tableService.getOrCreate(request.tableNo);
+    TableInfo info = tableService.getOrCreate(request.storeId, request.tableNo);
     if (request.code != null && !request.code.isBlank()) {
       tableCodeService.bind(request.storeId, request.tableNo, request.code);
     }
@@ -74,7 +74,7 @@ public class TableController {
   @PostMapping("/{tableNo}/clear")
   public Map<String, String> clear(@PathVariable String tableNo, @RequestBody ClearTableRequest request, HttpServletRequest http) {
     enforceStore(request.storeId, http);
-    orderService.clearTable(tableNo, request.clearedBy);
+    orderService.clearTable(request.storeId, tableNo, request.clearedBy);
     wsPublisher.publish("TABLE_UPDATED", tableNo);
     return Map.of("status", "cleared", "tableNo", tableNo);
   }
@@ -82,7 +82,7 @@ public class TableController {
   @PostMapping("/{tableNo}/settle")
   public Map<String, Object> settle(@PathVariable String tableNo, @RequestBody SettleTableRequest request, HttpServletRequest http) {
     enforceStore(request.storeId, http);
-    int count = orderService.settleTable(tableNo, request.paidBy);
+    int count = orderService.settleTable(request.storeId, tableNo, request.paidBy);
     wsPublisher.publish("TABLE_UPDATED", tableNo);
     wsPublisher.publish("ORDER_UPDATED", Map.of("tableNo", tableNo, "count", count));
     return Map.of("status", "settled", "tableNo", tableNo, "orders", count);

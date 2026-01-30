@@ -7,7 +7,7 @@ A full scan-to-order flow: customer scans a table QR -> shared cart + AI suggest
 - Frontend: React 18 + Vite + TypeScript (SPA)
 - Realtime: WebSocket (STOMP over SockJS)
 - Auth: JWT access + refresh tokens, refresh persisted in Redis
-- Database: MySQL (planned; current MVP in-memory for business data)
+- Database: MySQL (all core data persisted)
 - Cache/session: Redis
 - Media: MinIO (image storage)
 - Deployment: local Docker or cloud VM/container
@@ -144,10 +144,11 @@ mvn spring-boot:run
 - 9000 (minio)
 - 9001 (minio console)
 
-### Option B: Docker Compose (local or server)
+### Option B: Docker Compose (server)
 Run Redis + MinIO + backend container (MySQL is external, e.g., Cloud SQL):
 ```
-docker compose up -d
+docker compose up -d --build
+docker compose ps
 ```
 Then run frontend static server as above. For production, serve frontend with nginx.
 
@@ -172,8 +173,8 @@ Redis is required for refresh tokens and session lock.
 If using Docker Compose, it is already provisioned.
 
 ### Startup Order (local)
-1) `docker compose up -d` (redis, minio)
-2) `cd backend && mvn spring-boot:run`
+docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build redis minio
+docker compose -f docker-compose.yml -f docker-compose.local.yml ps
 3) `cd frontend && npm install && npm run dev`
 
 ## API (Current MVP)
@@ -251,7 +252,7 @@ Platform Admin:
 - AuthSession (refresh token store in Redis)
 
 ## Notes
-- Business data is still in-memory; auth refresh tokens are persisted in Redis.
+- Core business data is persisted in MySQL; auth refresh tokens are persisted in Redis.
 - New store registration creates a 3-day trial subscription.
 - MySQL schema lives in `backend/src/main/resources/schema.sql`. Seed data is intentionally empty; run SQL manually if needed.
 - WebSocket endpoint: `/ws` (SockJS); clients subscribe to `/topic/events`.

@@ -24,7 +24,8 @@ public class WalletController {
         "balance", wallet.balance,
         "ledger", wallet.ledger,
         "subscription", sub,
-        "aiCalls", billingService.getAiCalls(storeId)
+        "aiCalls", billingService.getAiCalls(storeId),
+        "aiTokens", billingService.getAiTokens(storeId)
     );
   }
 }

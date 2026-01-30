@@ -5,6 +5,7 @@ import java.util.List;
 
 public class Dish {
   public String id;
+  public String categoryId;
   public String name;
   public java.math.BigDecimal price;
   public String description;

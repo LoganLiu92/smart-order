@@ -1,41 +1,60 @@
 package com.smartorder.service;
 
 import com.smartorder.model.TableCode;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.List;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 @Service
 public class TableCodeService {
-  private final Map<String, TableCode> codeMap = new ConcurrentHashMap<>();
-  private final Map<String, TableCode> tableMap = new ConcurrentHashMap<>();
+  private final JdbcTemplate jdbcTemplate;
 
-  private String tableKey(String storeId, String tableNo) {
-    return storeId + ":" + tableNo;
+  public TableCodeService(JdbcTemplate jdbcTemplate) {
+    this.jdbcTemplate = jdbcTemplate;
   }
 
   public TableCode bind(String storeId, String tableNo, String code) {
+    jdbcTemplate.update("DELETE FROM table_codes WHERE store_id=? AND table_no=?", storeId, tableNo);
+    jdbcTemplate.update("DELETE FROM table_codes WHERE code=?", code);
+    jdbcTemplate.update(
+        "INSERT INTO table_codes (store_id, table_no, code) VALUES (?, ?, ?)",
+        storeId, tableNo, code);
     TableCode tc = new TableCode();
     tc.storeId = storeId;
     tc.tableNo = tableNo;
     tc.code = code;
-    codeMap.put(code, tc);
-    tableMap.put(tableKey(storeId, tableNo), tc);
     return tc;
   }
 
   public TableCode getByCode(String code) {
-    return codeMap.get(code);
+    List<TableCode> list = jdbcTemplate.query(
+        "SELECT store_id, table_no, code FROM table_codes WHERE code=?",
+        new Object[] { code },
+        (rs, rowNum) -> {
+          TableCode tc = new TableCode();
+          tc.storeId = rs.getString("store_id");
+          tc.tableNo = rs.getString("table_no");
+          tc.code = rs.getString("code");
+          return tc;
+        });
+    return list.isEmpty() ? null : list.get(0);
   }
 
   public TableCode getByTable(String storeId, String tableNo) {
-    return tableMap.get(tableKey(storeId, tableNo));
+    List<TableCode> list = jdbcTemplate.query(
+        "SELECT store_id, table_no, code FROM table_codes WHERE store_id=? AND table_no=?",
+        new Object[] { storeId, tableNo },
+        (rs, rowNum) -> {
+          TableCode tc = new TableCode();
+          tc.storeId = rs.getString("store_id");
+          tc.tableNo = rs.getString("table_no");
+          tc.code = rs.getString("code");
+          return tc;
+        });
+    return list.isEmpty() ? null : list.get(0);
   }
 
   public void unbind(String storeId, String tableNo) {
-    TableCode existing = tableMap.remove(tableKey(storeId, tableNo));
-    if (existing != null) {
-      codeMap.remove(existing.code);
-    }
+    jdbcTemplate.update("DELETE FROM table_codes WHERE store_id=? AND table_no=?", storeId, tableNo);
   }
 }
