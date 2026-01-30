@@ -6,12 +6,12 @@ spring:
     serialization:
       WRITE_DATES_AS_TIMESTAMPS: false
   datasource:
-    url: ${DB_URL:jdbc:mysql://localhost:3306/smart_order?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+    url: ${DB_URL:jdbc:mysql://cloudsql-proxy:3306/smart_order?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
     username: ${DB_USER:smart}
     password: ${DB_PASSWORD:smart}
   data:
     redis:
-      host: ${REDIS_HOST:localhost}
+      host: ${REDIS_HOST:redis}
       port: ${REDIS_PORT:6379}
 
 app:
@@ -31,9 +31,9 @@ app:
     access-ttl-minutes: 60
     refresh-ttl-days: 30
   minio:
-    endpoint: http://localhost:9000
-    accessKey: admin
-    secretKey: admin123
-    bucket: smart-order
+    endpoint: ${MINIO_ENDPOINT:http://minio:9000}
+    accessKey: ${MINIO_ACCESS_KEY:admin}
+    secretKey: ${MINIO_SECRET_KEY:admin123}
+    bucket: ${MINIO_BUCKET:smart-order}
     thumb-size: 320
     detail-size: 900
