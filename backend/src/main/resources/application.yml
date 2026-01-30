@@ -1,0 +1,39 @@
+server:
+  port: 8080
+
+spring:
+  jackson:
+    serialization:
+      WRITE_DATES_AS_TIMESTAMPS: false
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/smart_order?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+    username: ${DB_USER:smart}
+    password: ${DB_PASSWORD:smart}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+app:
+  cors:
+    allowed-origins: "*"
+  ws:
+    endpoint: /ws
+    topic-prefix: /topic
+  openai:
+    api-key: ${OPENAI_API_KEY:}
+    base-url: https://api.openai.com/v1
+    model:
+      recommend: gpt-4.1-mini
+      vision: gpt-4.1-mini
+  auth:
+    jwt-secret: ${JWT_SECRET:change-this-secret-min-32-bytes-long-please}
+    access-ttl-minutes: 60
+    refresh-ttl-days: 30
+  minio:
+    endpoint: http://localhost:9000
+    accessKey: admin
+    secretKey: admin123
+    bucket: smart-order
+    thumb-size: 320
+    detail-size: 900

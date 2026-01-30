@@ -1,0 +1,1 @@
+-- Seed data removed. Use registration to create new stores and users.

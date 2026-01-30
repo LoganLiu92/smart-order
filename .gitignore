@@ -1,0 +1,43 @@
+# Java / Maven
+backend/target/
+**/target/
+*.class
+*.jar
+*.war
+*.ear
+*.log
+
+# Node / Vite
+frontend/node_modules/
+**/node_modules/
+frontend/dist/
+**/dist/
+frontend/.vite/
+**/.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Env files
+.env
+.env.*
+
+# IDE / editor
+.idea/
+*.iml
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local tooling
+.gradle/
+.mvn/wrapper/maven-wrapper.jar
+*.tmp
+*.swp
