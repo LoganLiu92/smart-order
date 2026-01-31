@@ -10,10 +10,13 @@ import java.io.IOException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Component
 public class AuthFilter extends OncePerRequestFilter {
   private final JwtUtil jwtUtil;
+  private static final Logger log = LoggerFactory.getLogger(AuthFilter.class);
 
   public AuthFilter(JwtUtil jwtUtil) {
     this.jwtUtil = jwtUtil;
@@ -50,6 +53,7 @@ public class AuthFilter extends OncePerRequestFilter {
 
     if (!hasAccess(claims.role, path, request.getMethod())) {
       response.setStatus(HttpStatus.FORBIDDEN.value());
+      log.warn("Forbidden: role={} path={} method={}", claims.role, path, request.getMethod());
       return;
     }
 
@@ -57,6 +61,8 @@ public class AuthFilter extends OncePerRequestFilter {
     if (storeIdFromRequest != null && !"PLATFORM".equals(claims.role)
         && !storeIdFromRequest.equals(claims.storeId)) {
       response.setStatus(HttpStatus.FORBIDDEN.value());
+      log.warn("Forbidden: storeId mismatch tokenStoreId={} reqStoreId={} path={}",
+          claims.storeId, storeIdFromRequest, path);
       return;
     }
 
@@ -105,6 +111,9 @@ public class AuthFilter extends OncePerRequestFilter {
   }
 
   private String resolveStoreId(HttpServletRequest request, String path) {
+    if (path.startsWith("/api/menu/parse") || path.startsWith("/api/menu/ai-fill")) {
+      return null;
+    }
     String storeId = request.getParameter("storeId");
     if (storeId != null && !storeId.isBlank()) {
       return storeId;

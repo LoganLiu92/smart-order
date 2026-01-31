@@ -5,8 +5,10 @@ import com.smartorder.api.dto.PricingUpdateRequest;
 import com.smartorder.api.dto.RenewRequest;
 import com.smartorder.api.dto.TopupRequest;
 import com.smartorder.model.Pricing;
+import com.smartorder.model.User;
 import com.smartorder.service.AuthService;
 import com.smartorder.service.BillingService;
+import com.smartorder.service.UserService;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -17,18 +19,21 @@ import org.springframework.web.server.ResponseStatusException;
 public class PlatformController {
   private final BillingService billingService;
   private final AuthService authService;
+  private final UserService userService;
 
-  public PlatformController(BillingService billingService, AuthService authService) {
+  public PlatformController(BillingService billingService, AuthService authService, UserService userService) {
     this.billingService = billingService;
     this.authService = authService;
+    this.userService = userService;
   }
 
   @PostMapping("/login")
   public Map<String, Object> login(@RequestBody PlatformLoginRequest request) {
-    if (!"admin".equals(request.username) || !"admin123".equals(request.password)) {
+    User user = userService.validate("platform", request.username, request.password);
+    if (user == null || !"PLATFORM".equals(user.role)) {
       throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
     }
-    AuthService.Tokens tokens = authService.issueTokens("platform", request.username, "PLATFORM");
+    AuthService.Tokens tokens = authService.issueTokens("platform", user.username, user.role);
     return Map.of(
         "accessToken", tokens.accessToken,
         "refreshToken", tokens.refreshToken,

@@ -15,10 +15,13 @@ import java.util.stream.Collectors;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 public class MenuService {
   private final JdbcTemplate jdbcTemplate;
+  private static final Logger log = LoggerFactory.getLogger(MenuService.class);
 
   public MenuService(JdbcTemplate jdbcTemplate) {
     this.jdbcTemplate = jdbcTemplate;
@@ -233,6 +236,59 @@ public class MenuService {
       replaceOptionGroups(dish.id, dish.optionGroups);
     }
     return dish;
+  }
+
+  @Transactional
+  public void replaceMenu(String storeId, List<MenuCategory> categories) {
+    log.info("replaceMenu start: storeId={} categories={}", storeId, categories == null ? 0 : categories.size());
+    List<String> dishIds = jdbcTemplate.query(
+        "SELECT id FROM dishes WHERE store_id=?",
+        new Object[] { storeId },
+        (rs, rowNum) -> rs.getString("id"));
+    if (!dishIds.isEmpty()) {
+      String in = dishIds.stream().map(id -> "?").collect(Collectors.joining(","));
+      List<Object> args = new ArrayList<>(dishIds);
+      List<String> groupIds = jdbcTemplate.query(
+          "SELECT id FROM option_groups WHERE dish_id IN (" + in + ")",
+          args.toArray(),
+          (rs, rowNum) -> rs.getString("id"));
+      if (!groupIds.isEmpty()) {
+        String gin = groupIds.stream().map(id -> "?").collect(Collectors.joining(","));
+        jdbcTemplate.update("DELETE FROM option_items WHERE group_id IN (" + gin + ")", groupIds.toArray());
+      }
+      jdbcTemplate.update("DELETE FROM option_groups WHERE dish_id IN (" + in + ")", args.toArray());
+      jdbcTemplate.update("DELETE FROM dishes WHERE store_id=?", storeId);
+    }
+    jdbcTemplate.update("DELETE FROM menu_categories WHERE store_id=?", storeId);
+
+    if (categories == null) return;
+    for (MenuCategory category : categories) {
+      String categoryId = category.id == null ? UUID.randomUUID().toString() : category.id;
+      jdbcTemplate.update(
+          "INSERT INTO menu_categories (id, store_id, name) VALUES (?, ?, ?)",
+          categoryId, storeId, category.name);
+      if (category.dishes == null) continue;
+      for (Dish dish : category.dishes) {
+        String dishId = dish.id == null ? UUID.randomUUID().toString() : dish.id;
+        jdbcTemplate.update(
+            "INSERT INTO dishes (id, store_id, category_id, name, price, description, image_url, detail_image_url, tags, spicy_level, calories, ingredients, allergens) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            dishId,
+            storeId,
+            categoryId,
+            dish.name,
+            dish.price == null ? BigDecimal.ZERO : dish.price,
+            dish.description,
+            dish.imageUrl,
+            dish.detailImageUrl,
+            tagsToString(dish.tags),
+            dish.spicyLevel,
+            dish.calories,
+            dish.ingredients,
+            dish.allergens);
+      }
+    }
+    log.info("replaceMenu done: storeId={}", storeId);
   }
 
   private void replaceOptionGroups(String dishId, List<OptionGroup> groups) {

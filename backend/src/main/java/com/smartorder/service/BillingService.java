@@ -218,19 +218,19 @@ public class BillingService {
   }
 
   public long getAiCalls(String storeId) {
-    Long value = jdbcTemplate.queryForObject(
+    List<Long> list = jdbcTemplate.query(
         "SELECT ai_calls FROM store_ai_usage WHERE store_id=?",
         new Object[] { storeId },
-        Long.class);
-    return value == null ? 0L : value;
+        (rs, rowNum) -> rs.getLong("ai_calls"));
+    return list.isEmpty() ? 0L : list.get(0);
   }
 
   public long getAiTokens(String storeId) {
-    Long value = jdbcTemplate.queryForObject(
+    List<Long> list = jdbcTemplate.query(
         "SELECT ai_tokens FROM store_ai_usage WHERE store_id=?",
         new Object[] { storeId },
-        Long.class);
-    return value == null ? 0L : value;
+        (rs, rowNum) -> rs.getLong("ai_tokens"));
+    return list.isEmpty() ? 0L : list.get(0);
   }
 
   public List<Map<String, Object>> listStoreSummaries() {

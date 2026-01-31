@@ -10,6 +10,8 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -17,6 +19,7 @@ import org.springframework.stereotype.Service;
 public class OpenAiService {
   private final ObjectMapper objectMapper;
   private final HttpClient httpClient;
+  private static final Logger log = LoggerFactory.getLogger(OpenAiService.class);
 
   @Value("${app.openai.api-key:}")
   private String apiKey;
@@ -58,6 +61,7 @@ public class OpenAiService {
         )
     ));
 
+    log.info("OpenAI recommend request: model={} messageLength={}", recommendModel, message == null ? 0 : message.length());
     return postResponses(body);
   }
 
@@ -76,12 +80,23 @@ public class OpenAiService {
             "role", "user",
             "content", imageBase64 == null ? List.of(content) : List.of(
                 content,
-                Map.of("type", "input_image", "image_base64", imageBase64)
+                Map.of("type", "input_image", "image_url", toDataUrl(imageBase64))
             )
         )
     ));
 
+    log.info("OpenAI parseMenu request: model={} storeId={} hasImage={} ocrLength={}",
+        visionModel, storeId, imageBase64 != null, ocrText == null ? 0 : ocrText.length());
     return postResponses(body);
+  }
+
+  private String toDataUrl(String imageBase64) {
+    if (imageBase64 == null) return null;
+    String trimmed = imageBase64.trim();
+    if (trimmed.startsWith("data:")) {
+      return trimmed;
+    }
+    return "data:image/jpeg;base64," + trimmed;
   }
 
   public Map<String, Object> fillDishInfo(String name, String description) throws Exception {
@@ -100,11 +115,13 @@ public class OpenAiService {
         )
     ));
 
+    log.info("OpenAI fillDish request: model={} name={}", recommendModel, name);
     return postResponses(body);
   }
 
   private Map<String, Object> postResponses(Map<String, Object> body) throws Exception {
     String json = objectMapper.writeValueAsString(body);
+    log.debug("OpenAI request body size={}", json.length());
     HttpRequest request = HttpRequest.newBuilder()
         .uri(URI.create(baseUrl + "/responses"))
         .header("Authorization", "Bearer " + apiKey)
@@ -114,8 +131,13 @@ public class OpenAiService {
 
     HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
     if (response.statusCode() >= 300) {
+      log.warn("OpenAI error status={} body={}", response.statusCode(), response.body());
       throw new IllegalStateException("OpenAI error: " + response.statusCode() + " " + response.body());
     }
-    return objectMapper.readValue(response.body(), Map.class);
+    Map<String, Object> parsed = objectMapper.readValue(response.body(), Map.class);
+    Object id = parsed.get("id");
+    Object usage = parsed.get("usage");
+    log.info("OpenAI response ok: id={} usage={}", id, usage);
+    return parsed;
   }
 }

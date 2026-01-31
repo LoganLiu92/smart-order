@@ -1,5 +1,5 @@
 ﻿import { useEffect, useMemo, useState } from "react";
-import { apiGet, apiPatch, apiPost, getStoreIdentity, setStoreIdentity, uploadFile } from "../api/http";
+import { apiGet, apiPatch, apiPost, apiPostForm, getStoreIdentity, setStoreIdentity, uploadFile } from "../api/http";
 import { useNavigate } from "react-router-dom";
 
 type Dish = {
@@ -27,6 +27,8 @@ export default function StoreAdmin() {
   const [active, setActive] = useState("menu");
   const [menu, setMenu] = useState<Menu | null>(null);
   const [menuText, setMenuText] = useState("");
+  const [menuMode, setMenuMode] = useState<"image" | "text">("image");
+  const [menuImageFile, setMenuImageFile] = useState<File | null>(null);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [brandName, setBrandName] = useState("");
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -34,7 +36,7 @@ export default function StoreAdmin() {
   const [users, setUsers] = useState<any[]>([]);
   const [wallet, setWallet] = useState<any>(null);
   const [tables, setTables] = useState<any[]>([]);
-  const [baseUrl, setBaseUrl] = useState("http://localhost:8081/q?code=");
+  const baseUrl = "http://localhost:8081/q?code=";
   const [newTableNo, setNewTableNo] = useState("");
   const [newTableCode, setNewTableCode] = useState("");
   const [bindTableNo, setBindTableNo] = useState("");
@@ -64,19 +66,21 @@ export default function StoreAdmin() {
   }, [storeId]);
 
   const parseMenuText = async () => {
-    await apiPost("/api/menu/parse", { storeId, ocrText: menuText });
+    const targetStoreId = storeId || identity.storeId || "";
+    if (!targetStoreId) return;
+    await apiPost("/api/menu/parse", { storeId: targetStoreId, ocrText: menuText });
     await loadAll();
   };
 
   const parseMenuImage = async (file: File) => {
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const result = String(reader.result || "");
-      const base64 = result.split(",")[1];
-      await apiPost("/api/menu/parse", { storeId, imageBase64: base64 });
-      await loadAll();
-    };
-    reader.readAsDataURL(file);
+    const targetStoreId = storeId || identity.storeId || "";
+    if (!targetStoreId) return;
+    const formData = new FormData();
+    const prepared = await compressImage(file);
+    formData.append("storeId", targetStoreId);
+    formData.append("file", prepared);
+    await apiPostForm("/api/menu/parse-file", formData);
+    await loadAll();
   };
 
   const saveBrand = async () => {
@@ -206,20 +210,37 @@ export default function StoreAdmin() {
               <section className="stack fade">
                 <div className="card">
                   <h2>菜单构建</h2>
-                  <div className="grid" style={{ marginTop: 12 }}>
-                    <div>
+                  <div className="toolbar" style={{ marginTop: 12 }}>
+                    <button className={menuMode === "image" ? "dark" : "ghost"} onClick={() => setMenuMode("image")}>
+                      识别图片
+                    </button>
+                    <button className={menuMode === "text" ? "dark" : "ghost"} onClick={() => setMenuMode("text")}>
+                      文本录入
+                    </button>
+                  </div>
+
+                  {menuMode === "text" && (
+                    <div style={{ marginTop: 12 }}>
                       <label>菜单文本</label>
                       <textarea rows={4} value={menuText} onChange={(e) => setMenuText(e.target.value)} />
                       <button className="secondary" style={{ marginTop: 8 }} onClick={parseMenuText}>
                         发送到 OpenAI
                       </button>
                     </div>
-                    <div>
+                  )}
+
+                  {menuMode === "image" && (
+                    <div style={{ marginTop: 12 }}>
                       <label>菜单图片</label>
-                      <input type="file" accept="image/*" onChange={(e) => e.target.files?.[0] && parseMenuImage(e.target.files[0])} />
-                      <p className="small">图片会提交到识别接口。</p>
+                      <input type="file" accept="image/*" onChange={(e) => setMenuImageFile(e.target.files?.[0] || null)} />
+                      <div className="toolbar" style={{ marginTop: 8 }}>
+                        <button className="secondary" onClick={() => menuImageFile && parseMenuImage(menuImageFile)} disabled={!menuImageFile}>
+                          发送识别
+                        </button>
+                      </div>
+                      <p className="small">选择图片后点击按钮提交。</p>
                     </div>
-                  </div>
+                  )}
                 </div>
 
                 <div className="card">
@@ -350,16 +371,7 @@ export default function StoreAdmin() {
               <section className="stack fade">
                 <div className="card">
                   <h2>桌台二维码链接</h2>
-                  <div className="grid" style={{ marginTop: 12 }}>
-                    <div>
-                      <label>二维码基础地址</label>
-                      <input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} />
-                    </div>
-                    <div>
-                      <label>示例链接</label>
-                      <input value={`${baseUrl}YOUR_CODE`} readOnly />
-                    </div>
-                  </div>
+                  <p className="small">创建桌台后绑定二维码 code 即可。</p>
                 </div>
 
                 <div className="card">
@@ -410,7 +422,6 @@ export default function StoreAdmin() {
                         </div>
                       </div>
                       <p className="small">二维码 code: {item.code || "未绑定"}</p>
-                      {item.code && <p className="small">链接: {`${baseUrl}${item.code}`}</p>}
                     </div>
                   ))}
                 </div>
@@ -520,6 +531,49 @@ function extractResponseText(response: any) {
   if (!first || !first.content) return "";
   const textItem = first.content.find((c: any) => c.type === "output_text");
   return textItem ? textItem.text : "";
+}
+
+async function compressImage(file: File) {
+  const maxBytes = 2 * 1024 * 1024;
+  if (!file.type.startsWith("image/") || file.size <= maxBytes) {
+    return file;
+  }
+
+  const img = await loadImage(file);
+  const maxWidth = 1600;
+  const maxHeight = 1600;
+  const ratio = Math.min(1, maxWidth / img.width, maxHeight / img.height);
+  const width = Math.round(img.width * ratio);
+  const height = Math.round(img.height * ratio);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return file;
+  ctx.drawImage(img, 0, 0, width, height);
+
+  const blob = await new Promise<Blob | null>((resolve) =>
+    canvas.toBlob(resolve, "image/jpeg", 0.82)
+  );
+  if (!blob) return file;
+  return new File([blob], file.name.replace(/\.\w+$/, ".jpg"), { type: "image/jpeg" });
+}
+
+function loadImage(file: File) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(img);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("image load failed"));
+    };
+    img.src = url;
+  });
 }
 
 function AddDishForm({

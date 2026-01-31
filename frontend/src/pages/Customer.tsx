@@ -11,6 +11,7 @@ type Dish = {
   calories?: number;
   imageUrl?: string;
   optionGroups?: OptionGroup[];
+  aiReason?: string;
 };
 
 type OptionGroup = {
@@ -337,6 +338,7 @@ export default function Customer() {
                 <div key={dish.id} className="card">
                   <strong>{dish.name}</strong>
                   <p className="small">${dish.price}</p>
+                  {dish.aiReason && <p className="small">{dish.aiReason}</p>}
                 </div>
               ))}
             </div>
@@ -454,6 +456,7 @@ export default function Customer() {
                         <div key={dish.id} className="card soft">
                           <strong>{dish.name}</strong>
                           <p className="small">${dish.price}</p>
+                          {dish.aiReason && <p className="small">{dish.aiReason}</p>}
                         </div>
                       ))}
                     </div>
@@ -539,7 +542,9 @@ function extractRecommendations(response: any, menu: Menu | null) {
   if (parsed?.recommendations && menu) {
     parsed.recommendations.forEach((rec: any) => {
       const dish = findDish(menu, rec.dishId, rec.dishName);
-      if (dish) recommendations.push(dish);
+      if (dish) {
+        recommendations.push({ ...dish, aiReason: rec.reason });
+      }
     });
   }
   return { recommendations, rawText: text };

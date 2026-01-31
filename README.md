@@ -75,6 +75,7 @@ WebSocket event stream (`/topic/events`):
 
 ## OpenAI Integrations
 1) Menu image/text -> structured menu
+   - Parsed categories/dishes are written into MySQL automatically
 2) Customer preference -> dish recommendations
 3) Dish detail autofill (ingredients, allergens, calories, tags)
 
@@ -114,6 +115,7 @@ VITE_API_BASE=https://your-api.example.com
 VITE_WS_URL=https://your-api.example.com/ws
 ```
 Dev server also proxies `/api` and `/ws` to `http://localhost:8080`.
+In production, Nginx forwards `/api` and `/ws` to the backend (see `deploy/nginx.conf`).
 Then open:
 - Landing: `http://localhost:8081/`
 - Store Login: `http://localhost:8081/login`
@@ -145,12 +147,20 @@ mvn spring-boot:run
 - 9001 (minio console)
 
 ### Option B: Docker Compose (server)
-Run Redis + MinIO + backend container (MySQL is external, e.g., Cloud SQL):
+Run Nginx + backend + Redis + MinIO + Cloud SQL proxy (MySQL is external, e.g., Cloud SQL):
 ```
 docker compose up -d --build
 docker compose ps
 ```
-Then run frontend static server as above. For production, serve frontend with nginx.
+This uses `docker-compose.yml` and serves frontend via Nginx.
+
+### Option C: Docker Compose (local)
+Run Redis + MinIO only (MySQL and backend run locally):
+```
+docker compose -f docker-compose.local.yml up -d
+docker compose -f docker-compose.local.yml ps
+```
+Then run backend + frontend with `mvn spring-boot:run` and `npm run dev`.
 
 ## Local Scripts & Operational Checklist
 ### SQL Init (manual)
@@ -173,8 +183,8 @@ Redis is required for refresh tokens and session lock.
 If using Docker Compose, it is already provisioned.
 
 ### Startup Order (local)
-docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build redis minio
-docker compose -f docker-compose.yml -f docker-compose.local.yml ps
+1) `docker compose -f docker-compose.local.yml up -d`
+2) `cd backend && mvn spring-boot:run`
 3) `cd frontend && npm install && npm run dev`
 
 ## API (Current MVP)
@@ -195,6 +205,7 @@ Menu:
 - POST /api/menu/{storeId}/categories
 - POST /api/menu/{storeId}/categories/{categoryId}/dishes
 - POST /api/menu/parse
+- POST /api/menu/parse-file (multipart file)
 - POST /api/menu/ai-fill
 
 Media:
@@ -283,6 +294,40 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
+```
+
+## Environment Templates (Dev vs Prod)
+### Local Dev (.env)
+```
+JWT_SECRET=change-this-to-strong-32bytes-min
+OPENAI_API_KEY=
+
+DB_URL=jdbc:mysql://localhost:3306/smart_order?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+DB_USER=smart
+DB_PASSWORD=smart
+
+REDIS_HOST=localhost
+REDIS_PORT=6379
+
+MINIO_ENDPOINT=http://localhost:9000
+MINIO_ACCESS_KEY=admin
+MINIO_SECRET_KEY=admin123
+MINIO_BUCKET=smart-order
+```
+
+### Production (docker-compose.yml)
+```
+JWT_SECRET=change-this-to-strong-32bytes-min
+OPENAI_API_KEY=your-openai-key
+
+CLOUDSQL_INSTANCE=YOUR_PROJECT:YOUR_REGION:YOUR_INSTANCE
+DB_NAME=smart_order
+DB_USER=smart
+DB_PASSWORD=smart
+
+MINIO_ROOT_USER=admin
+MINIO_ROOT_PASSWORD=admin123
+MINIO_BUCKET=smart-order
 ```
 
 ## MinIO Config

@@ -119,6 +119,10 @@ export async function apiPatch(path: string, body?: unknown) {
   });
 }
 
+export async function apiPostForm(path: string, formData: FormData) {
+  return fetchWithAuth(path, { method: "POST", body: formData });
+}
+
 export async function apiDelete(path: string) {
   return fetchWithAuth(path, { method: "DELETE" });
 }
