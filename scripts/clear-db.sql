@@ -1,29 +1,29 @@
--- Clear all data (keeps schema)
+-- Drop all tables (reset schema)
 SET FOREIGN_KEY_CHECKS=0;
 
-TRUNCATE TABLE cart_item_options;
-TRUNCATE TABLE cart_items;
-TRUNCATE TABLE carts;
+DROP TABLE IF EXISTS cart_item_options;
+DROP TABLE IF EXISTS cart_items;
+DROP TABLE IF EXISTS carts;
 
-TRUNCATE TABLE order_item_options;
-TRUNCATE TABLE order_items;
-TRUNCATE TABLE orders;
+DROP TABLE IF EXISTS order_item_options;
+DROP TABLE IF EXISTS order_items;
+DROP TABLE IF EXISTS orders;
 
-TRUNCATE TABLE option_items;
-TRUNCATE TABLE option_groups;
-TRUNCATE TABLE dishes;
-TRUNCATE TABLE menu_categories;
+DROP TABLE IF EXISTS option_items;
+DROP TABLE IF EXISTS option_groups;
+DROP TABLE IF EXISTS dishes;
+DROP TABLE IF EXISTS menu_categories;
 
-TRUNCATE TABLE table_codes;
-TRUNCATE TABLE tables;
+DROP TABLE IF EXISTS table_codes;
+DROP TABLE IF EXISTS tables;
 
-TRUNCATE TABLE store_ai_usage;
-TRUNCATE TABLE wallet_ledger;
-TRUNCATE TABLE wallets;
-TRUNCATE TABLE subscriptions;
-TRUNCATE TABLE platform_pricing;
-TRUNCATE TABLE auth_sessions;
-TRUNCATE TABLE users;
-TRUNCATE TABLE stores;
+DROP TABLE IF EXISTS store_ai_usage;
+DROP TABLE IF EXISTS wallet_ledger;
+DROP TABLE IF EXISTS wallets;
+DROP TABLE IF EXISTS subscriptions;
+DROP TABLE IF EXISTS platform_pricing;
+DROP TABLE IF EXISTS auth_sessions;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS stores;
 
 SET FOREIGN_KEY_CHECKS=1;

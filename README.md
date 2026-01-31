@@ -174,6 +174,7 @@ Seed data is intentionally empty. Add your own records or use the UI.
 ```
 mysql -u root -p < scripts/clear-db.sql
 ```
+This drops all tables (use when schema changes).
 
 ### MinIO Bucket
 If using MinIO for images, create the bucket once:
